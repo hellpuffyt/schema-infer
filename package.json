@@ -1,0 +1,38 @@
+{
+  "name": "schema-infer",
+  "version": "0.1.0",
+  "description": "Infer a JSON Schema 2020-12 document from sample JSON or NDJSON data, with conservative format detection and honest optionality.",
+  "keywords": ["json-schema", "schema", "inference", "ndjson", "json", "cli", "typescript"],
+  "license": "MIT",
+  "author": "Prabesh Sharma",
+  "repository": { "type": "git", "url": "git+https://github.com/hellpuffyt/schema-infer.git" },
+  "bugs": { "url": "https://github.com/hellpuffyt/schema-infer/issues" },
+  "homepage": "https://github.com/hellpuffyt/schema-infer#readme",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+  },
+  "bin": { "schema-infer": "./dist/bin.js" },
+  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "@types/node": "^22.8.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "eslint": "^9.13.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.11.0",
+    "vitest": "^2.1.0"
+  }
+}
