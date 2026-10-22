@@ -79,6 +79,11 @@ export function typeOf(value: JsonValue): JsonType {
   }
 }
 
+function codePointLength(text: string): number {
+  // Each lone or paired surrogate pair counts once.
+  return text.length - (text.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g)?.length ?? 0);
+}
+
 function trackValue(
   observation: Observation,
   value: string | number | boolean | null,
@@ -135,6 +140,9 @@ export function observe(observation: Observation, value: JsonValue): void {
 
     case 'string': {
       const text = value as string;
+      // JSON Schema lengths count Unicode code points, not UTF-16 units:
+      // "😀" has length 1 for minLength/maxLength but .length 2 in JS.
+      const length = codePointLength(text);
       const matched = matchingFormats(text);
       // Intersect: a format survives only while every sample matches it.
       if (observation.formats === undefined) {
@@ -146,12 +154,12 @@ export function observe(observation: Observation, value: JsonValue): void {
       }
       observation.minLength =
         observation.minLength === undefined
-          ? text.length
-          : Math.min(observation.minLength, text.length);
+          ? length
+          : Math.min(observation.minLength, length);
       observation.maxLength =
         observation.maxLength === undefined
-          ? text.length
-          : Math.max(observation.maxLength, text.length);
+          ? length
+          : Math.max(observation.maxLength, length);
       trackValue(observation, text);
       break;
     }

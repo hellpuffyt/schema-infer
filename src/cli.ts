@@ -131,6 +131,10 @@ export function main(argv: string[] = process.argv.slice(2)): number {
       process.stderr.write(`${error.message}\n`);
       return EXIT_ERROR;
     }
+    if (error instanceof RangeError && /call stack/i.test(error.message)) {
+      process.stderr.write('input is too deeply nested to infer a schema (call stack exhausted)\n');
+      return EXIT_ERROR;
+    }
     throw error;
   }
 }
