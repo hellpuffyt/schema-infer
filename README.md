@@ -64,8 +64,11 @@ the evidence supports**:
 - **Type unions** in canonical order, so output is byte-stable regardless of
   input order.
 - **`integer` vs `number`**, collapsing to `number` when both appear.
-- **Nine string formats**: `date-time`, `date`, `time`, `uuid`, `email`,
-  `ipv4`, `ipv6`, `uri`.
+- **Eight string formats**: `date-time`, `date`, `time`, `uuid`, `email`,
+  `ipv4`, `ipv6`, `uri` — checked strictly (real calendar dates, RFC 3339
+  times with the offset JSON Schema requires, a real IPv6 parser), so every
+  sample validates against the schema it produced. `tests/validator.test.ts`
+  checks this with ajv's JSON Schema 2020-12 validator.
 - **Optionality** derived from presence counts across all samples.
 - **Recursive** through nested objects and arrays, merging element evidence
   across separate arrays.
@@ -100,10 +103,14 @@ wrong.
 
 ## Installation
 
+schema-infer is not published to the npm registry yet (`npm install
+schema-infer` finds nothing). Install it from a clone:
+
 ```bash
-npm install schema-infer      # library
-npm install -g schema-infer   # CLI
-npx schema-infer data.json    # no install
+git clone https://github.com/hellpuffyt/schema-infer
+cd schema-infer
+npm ci && npm run build
+npm link                      # puts `schema-infer` on your PATH
 ```
 
 Requires Node 18 or newer.
@@ -217,7 +224,7 @@ is always reproducible from the invocation alone.
 ## Testing
 
 ```bash
-npm test          # 60 tests
+npm test          # 89 tests
 npm run coverage
 npm run lint
 npm run typecheck
@@ -230,7 +237,7 @@ cannot run is not a working release.
 
 ## Deployment
 
-Publishing to npm:
+Publishing to npm (not done yet; for the maintainer):
 
 ```bash
 npm run build
@@ -248,6 +255,9 @@ npm publish
   per position, so a large or hostile file cannot make it retain everything.
 - The tool reads data you point it at and writes a schema to stdout. It never
   writes to your input files.
+- Deeply nested input that would exhaust the call stack is reported as an
+  error, not a crash. Report vulnerabilities privately as described in
+  [SECURITY.md](SECURITY.md).
 
 ## Roadmap
 
