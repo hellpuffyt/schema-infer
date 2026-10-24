@@ -100,7 +100,14 @@ function toSchema(observation: Observation, options: ResolvedOptions): Schema {
       const child = observation.properties.get(key);
       /* c8 ignore next */
       if (!child) continue;
-      properties[key] = toSchema(child, options);
+      // defineProperty, not assignment: `properties["__proto__"] = x` would
+      // replace the object's prototype and silently drop the property.
+      Object.defineProperty(properties, key, {
+        value: toSchema(child, options),
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      });
       // Required means "present in every object seen at this position".
       if (observation.propertyCounts.get(key) === observation.objectCount) {
         required.push(key);

@@ -7,22 +7,52 @@
  * to be rejected later, which is a worse failure than emitting no format.
  */
 
+import { isIPv6 } from 'node:net';
+
+const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const TIME_RE = /^(\d{2}):(\d{2}):(\d{2})(\.\d+)?([Zz]|([+-])(\d{2}):(\d{2}))$/;
+
+/** A real calendar date: Date.parse rolls 2023-02-29 over to March, so check y/m/d explicitly. */
+function isCalendarDate(v: string): boolean {
+  const m = DATE_RE.exec(v);
+  if (!m) return false;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (mo < 1 || mo > 12 || d < 1) return false;
+  const daysInMonth = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+  return d <= daysInMonth;
+}
+
+/**
+ * RFC 3339 full-time: hours 00-23, minutes 00-59, seconds 00-60 (leap
+ * second), and a *required* offset, which is what JSON Schema's `time`
+ * means — validators reject `10:00:00` without one.
+ */
+function isRfc3339Time(v: string): boolean {
+  const m = TIME_RE.exec(v);
+  if (!m) return false;
+  const [h, mi, se] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (h > 23 || mi > 59 || se > 60) return false;
+  if (m[6] !== undefined && (Number(m[7]) > 23 || Number(m[8]) > 59)) return false;
+  return true;
+}
+
 /** Formats this package can recognise, in priority order. */
 export const FORMATS: readonly { name: string; test: (value: string) => boolean }[] = [
   {
     // RFC 3339 date-time, the format JSON Schema actually specifies.
     name: 'date-time',
-    test: (v) =>
-      /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(\.\d+)?([Zz]|[+-]\d{2}:\d{2})$/.test(v) &&
-      !Number.isNaN(Date.parse(v)),
+    test: (v) => {
+      const sep = v.search(/[Tt]/);
+      return sep === 10 && isCalendarDate(v.slice(0, 10)) && isRfc3339Time(v.slice(11));
+    },
   },
   {
     name: 'date',
-    test: (v) => /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)),
+    test: isCalendarDate,
   },
   {
     name: 'time',
-    test: (v) => /^\d{2}:\d{2}:\d{2}(\.\d+)?([Zz]|[+-]\d{2}:\d{2})?$/.test(v),
+    test: isRfc3339Time,
   },
   {
     name: 'uuid',
@@ -43,7 +73,10 @@ export const FORMATS: readonly { name: string; test: (value: string) => boolean 
   },
   {
     name: 'ipv6',
-    test: (v) => /^[0-9a-fA-F:]+$/.test(v) && v.includes('::') === (v.match(/::/g)?.length === 1) && /:/.test(v) && v.split(':').length >= 3,
+    // A real address parser instead of a character-class guess ("a:b:c" is
+    // not an address). Zone ids (`%eth0`) are excluded: the JSON Schema
+    // `ipv6` format does not allow them.
+    test: (v) => !v.includes('%') && isIPv6(v),
   },
   {
     name: 'uri',

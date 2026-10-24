@@ -137,3 +137,13 @@ describe('failure handling', () => {
     expect(main(['--indent', 'wide'])).toBe(EXIT_USAGE);
   });
 });
+
+describe('hostile input', () => {
+  it('reports deeply nested input cleanly instead of crashing with a stack trace', () => {
+    let deep = '1';
+    for (let i = 0; i < 100_000; i++) deep = `[${deep}]`;
+    const file = sampleFile('deep.json', deep);
+    expect(main([file, '--no-unwrap'])).toBe(EXIT_ERROR);
+    expect(stderr()).toContain('too deeply nested');
+  });
+});
