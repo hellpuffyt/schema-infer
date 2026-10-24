@@ -11,7 +11,7 @@ samples: `parse.ts` (format detection, NDJSON), `observe.ts` (evidence tree), `i
 
 ## Platforms and prerequisites
 
-Node.js >= 18. Verified on macOS (Apple Silicon): full gate on Node 24.19.0, tests on Node 18 and
+Node.js >= 20 (Node 18, end-of-life, was dropped with the vitest 4 upgrade). Verified on macOS (Apple Silicon): full gate on Node 24.19.0, tests on Node 18 and
 20. CI matrix per workflow on the default branch; Windows not run locally. Not published to npm.
 
 ## Clean-clone setup (README "Installation")
