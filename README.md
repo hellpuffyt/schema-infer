@@ -4,7 +4,6 @@ Infer a JSON Schema 2020-12 document from sample JSON or NDJSON — conservative
 enough that you can trust the result.
 
 [![CI](https://github.com/hellpuffyt/schema-infer/actions/workflows/ci.yml/badge.svg)](https://github.com/hellpuffyt/schema-infer/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/schema-infer)](https://www.npmjs.com/package/schema-infer)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ## What is it?
@@ -13,9 +12,9 @@ Point it at real data and it writes the schema you would have written by hand.
 
 ```console
 $ cat orders.ndjson
-{"id":"550e8400-...","email":"a@b.com","status":"paid","total":19.99,"tags":["x"]}
-{"id":"650e8400-...","email":"c@d.com","status":"pending","total":5,"tags":[]}
-{"id":"750e8400-...","email":"e@f.com","status":"paid","total":42.5,"note":"gift"}
+{"id":"550e8400-e29b-41d4-a716-446655440000","email":"a@b.com","status":"paid","total":19.99,"tags":["x"]}
+{"id":"650e8400-e29b-41d4-a716-446655440000","email":"c@d.com","status":"pending","total":5,"tags":[]}
+{"id":"750e8400-e29b-41d4-a716-446655440000","email":"e@f.com","status":"paid","total":42.5,"note":"gift"}
 
 $ schema-infer --enum 5 orders.ndjson
 {
@@ -29,12 +28,12 @@ $ schema-infer --enum 5 orders.ndjson
     "tags":   { "type": "array", "items": { "type": "string" } },
     "total":  { "type": "number" }
   },
-  "required": ["email", "id", "status", "tags"]
+  "required": ["email", "id", "status", "total"]
 }
 ```
 
-Note what it got right without being told: `note` is optional because one record
-lacked it, `total` widened to `number` because `5` and `42.5` were both present,
+Note what it got right without being told: `note` and `tags` are optional because
+some records lacked them, `total` widened to `number` because `5` and `42.5` were both present,
 `status` became an enum but `id` and `email` did not, and `tags` kept its item
 type even though one sample was empty.
 
