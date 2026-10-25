@@ -112,7 +112,7 @@ npm ci && npm run build
 npm link                      # puts `schema-infer` on your PATH
 ```
 
-Requires Node 18 or newer.
+Requires Node 20 or newer.
 
 ## Usage
 
@@ -230,7 +230,7 @@ npm run typecheck
 npm run build
 ```
 
-CI runs the suite on Node 18, 20 and 22 across Linux, macOS and Windows, plus a
+CI runs the suite on Node 20 and 22 across Linux, macOS and Windows, plus a
 smoke job that executes the built CLI — because a build that type-checks but
 cannot run is not a working release.
 
