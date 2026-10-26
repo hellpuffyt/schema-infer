@@ -6,37 +6,32 @@ what the samples support.
 [![CI](https://github.com/hellpuffyt/schema-infer/actions/workflows/ci.yml/badge.svg)](https://github.com/hellpuffyt/schema-infer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-<img src="docs/assets/overview.svg" width="100%" alt="Diagram of the two stages: parse.ts reads JSON, NDJSON or stdin into samples; observe.ts folds them into an Observation tree of evidence (types, key presence counts, matching formats from formats.ts, up to 64 distinct values, bounds); infer.ts then decides required, format, enum and optional bounds and emits a JSON Schema 2020-12 document.">
-
 **Status:** version 0.1.0. Library and CLI work and are tested on Node 20 and
 22; the package is not on the npm registry yet, so install from a clone.
 
 ## What it does
 
 Point it at real data and it writes the schema you would otherwise write by
-hand. The CLI prints with a 2-space indent; the output below is condensed to
-save space.
+hand. A real run on three order records (`jq` only reformats the output to one
+line per property):
+
+<img src="docs/screenshots/infer-orders-ndjson.png" width="100%" alt="Terminal capture: three NDJSON order records, then schema-infer --enum 5 output showing email and id with string formats, note as a plain string, status as enum paid/pending, tags as an array of strings, total as number, and required email, id, status, total.">
 
 ```console
 $ cat orders.ndjson
 {"id":"550e8400-e29b-41d4-a716-446655440000","email":"a@b.com","status":"paid","total":19.99,"tags":["x"]}
 {"id":"650e8400-e29b-41d4-a716-446655440000","email":"c@d.com","status":"pending","total":5,"tags":[]}
 {"id":"750e8400-e29b-41d4-a716-446655440000","email":"e@f.com","status":"paid","total":42.5,"note":"gift"}
-
-$ schema-infer --enum 5 orders.ndjson
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "properties": {
-    "email":  { "type": "string", "format": "email" },
-    "id":     { "type": "string", "format": "uuid" },
-    "note":   { "type": "string" },
-    "status": { "enum": ["paid", "pending"] },
-    "tags":   { "type": "array", "items": { "type": "string" } },
-    "total":  { "type": "number" }
-  },
-  "required": ["email", "id", "status", "total"]
-}
+$ schema-infer --enum 5 orders.ndjson > schema.json
+$ jq -c '.properties | to_entries[] | {(.key): .value}' schema.json
+{"email":{"type":"string","format":"email"}}
+{"id":{"type":"string","format":"uuid"}}
+{"note":{"type":"string"}}
+{"status":{"enum":["paid","pending"]}}
+{"tags":{"type":"array","items":{"type":"string"}}}
+{"total":{"type":"number"}}
+$ jq -c '.required' schema.json
+["email","id","status","total"]
 ```
 
 Without any hints, `note` and `tags` are optional because
@@ -83,6 +78,10 @@ tool takes the opposite bias and **claims only what the evidence supports**:
 ## Architecture
 
 Inference runs in two stages, and the rest of the design follows from that:
+
+<img src="docs/assets/overview.svg" width="100%" alt="Diagram of the two stages: parse.ts reads JSON, NDJSON or stdin into samples; observe.ts folds them into an Observation tree of evidence (types, key presence counts, matching formats from formats.ts, up to 64 distinct values, bounds); infer.ts then decides required, format, enum and optional bounds and emits a JSON Schema 2020-12 document.">
+
+*Diagram of the two stages, drawn from the source.* The same flow in text:
 
 ```
 samples ──▶ observe.ts ──▶ Observation tree ──▶ infer.ts ──▶ Schema
