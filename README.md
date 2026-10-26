@@ -1,14 +1,21 @@
 # schema-infer
 
-Infer a JSON Schema 2020-12 document from sample JSON or NDJSON — conservatively
-enough that you can trust the result.
+Infer a JSON Schema 2020-12 document from sample JSON or NDJSON, claiming only
+what the samples support.
 
 [![CI](https://github.com/hellpuffyt/schema-infer/actions/workflows/ci.yml/badge.svg)](https://github.com/hellpuffyt/schema-infer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-## What is it?
+<img src="docs/assets/overview.svg" width="100%" alt="Diagram of the two stages: parse.ts reads JSON, NDJSON or stdin into samples; observe.ts folds them into an Observation tree of evidence (types, key presence counts, matching formats from formats.ts, up to 64 distinct values, bounds); infer.ts then decides required, format, enum and optional bounds and emits a JSON Schema 2020-12 document.">
 
-Point it at real data and it writes the schema you would have written by hand.
+**Status:** version 0.1.0. Library and CLI work and are tested on Node 20 and
+22; the package is not on the npm registry yet, so install from a clone.
+
+## What it does
+
+Point it at real data and it writes the schema you would otherwise write by
+hand. The CLI prints with a 2-space indent; the output below is condensed to
+save space.
 
 ```console
 $ cat orders.ndjson
@@ -32,27 +39,27 @@ $ schema-infer --enum 5 orders.ndjson
 }
 ```
 
-Note what it got right without being told: `note` and `tags` are optional because
+Without any hints, `note` and `tags` are optional because
 some records lacked them, `total` widened to `number` because `5` and `42.5` were both present,
 `status` became an enum but `id` and `email` did not, and `tags` kept its item
-type even though one sample was empty.
+type even though one sample was an empty array.
 
-## Why does it exist?
+## Why
 
 Writing a JSON Schema for an API you did not design is tedious and error-prone.
-Most generators make it worse by being credulous — they will happily tell you a
+Most generators make it worse by trusting a small sample: they will tell you a
 field is an enum of two values because your sample had two rows, or that a
 string is `format: email` because the first one looked like an address.
 
-A schema that is wrong in that direction is actively harmful: it rejects valid
-production data. This tool is built around the opposite bias — **claim only what
-the evidence supports**:
+A schema that is wrong in that direction rejects valid production data. This
+tool takes the opposite bias and **claims only what the evidence supports**:
 
 - A `format` survives only while **every** observed string matches it. One
   counter-example withdraws the claim.
 - `required` means a key was present in **every** object seen at that position.
-- An `enum` needs three or more samples, a repeated value, and no surviving
-  string format — so identifiers and timestamps never become closed sets.
+- An `enum` needs `--enum <n>`, three or more samples, a repeated value, and no
+  surviving string format, so identifiers and timestamps never become closed
+  sets.
 - `minimum`/`maxLength`/`minItems` are **off by default**, because observed
   bounds describe your sample, not your data model.
 
@@ -64,19 +71,18 @@ the evidence supports**:
   input order.
 - **`integer` vs `number`**, collapsing to `number` when both appear.
 - **Eight string formats**: `date-time`, `date`, `time`, `uuid`, `email`,
-  `ipv4`, `ipv6`, `uri` — checked strictly (real calendar dates, RFC 3339
+  `ipv4`, `ipv6`, `uri`, checked strictly (real calendar dates, RFC 3339
   times with the offset JSON Schema requires, a real IPv6 parser), so every
   sample validates against the schema it produced. `tests/validator.test.ts`
   checks this with ajv's JSON Schema 2020-12 validator.
 - **Optionality** derived from presence counts across all samples.
 - **Recursive** through nested objects and arrays, merging element evidence
   across separate arrays.
-- **Library and CLI**, fully typed, no runtime dependencies.
+- **Library and CLI**, typed, no runtime dependencies.
 
 ## Architecture
 
-Inference runs in two stages, which is the design decision the rest follows
-from:
+Inference runs in two stages, and the rest of the design follows from that:
 
 ```
 samples ──▶ observe.ts ──▶ Observation tree ──▶ infer.ts ──▶ Schema
@@ -140,6 +146,8 @@ schema-infer --title User data.json        # add a title
 | `--no-dialect` | Omit the `$schema` keyword |
 | `--no-unwrap` | Treat a top-level array as one sample, not many |
 | `-i`, `--indent <n>` | Output indent (default `2`) |
+| `-h`, `--help` | Show help |
+| `-v`, `--version` | Show the version |
 
 Exit codes: `0` success, `1` error, `2` usage error.
 
@@ -168,7 +176,7 @@ const schema = inferSchema(samples, { enumThreshold: 8, closedObjects: true });
 ### `inferSchema(samples: JsonValue[], options?: InferOptions): Schema`
 
 Infers a schema from many samples. Each sample is treated as a separate document
-**at the same position** — so passing an array of records infers the schema *of
+**at the same position**, so passing an array of records infers the schema *of
 a record*. To describe the array itself, use `inferSchemaFromValue`.
 
 ### `inferSchemaFromValue(sample: JsonValue, options?: InferOptions): Schema`
@@ -230,9 +238,9 @@ npm run typecheck
 npm run build
 ```
 
-CI runs the suite on Node 20 and 22 across Linux, macOS and Windows, plus a
-smoke job that executes the built CLI — because a build that type-checks but
-cannot run is not a working release.
+CI runs the suite on Node 20 and 22 across Linux, macOS and Windows, a job that
+runs lint, typecheck, build and coverage on Node 22, and a smoke job that
+executes the built CLI, since a build that type-checks can still fail to run.
 
 ## Deployment
 
@@ -258,7 +266,16 @@ npm publish
   error, not a crash. Report vulnerabilities privately as described in
   [SECURITY.md](SECURITY.md).
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and the checks CI runs.
+[CHANGELOG.md](CHANGELOG.md) lists changes, and
+[docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) records the last
+audit.
+
 ## Roadmap
+
+Not implemented yet:
 
 - `$defs` extraction for structures repeated across the tree.
 - `oneOf` for tagged unions detected by a discriminator key.
@@ -266,4 +283,4 @@ npm publish
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).
